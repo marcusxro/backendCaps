@@ -3,7 +3,8 @@ const cors = require('cors');
 const AccCollection = require('./collections/Accounts') //acc db
 const Inventory = require('./collections/Inventory') // inventory db
 const Ingredients = require('./collections/Ingredients') // ingredients db
-const Reports = require('./collections/Reports')
+const Reports = require('./collections/Reports') //reports db
+const Chat = require('./collections/Chat')
 const app = express();
 const { ObjectId } = require('mongodb');
 
@@ -64,6 +65,7 @@ app.put('/ban/:user', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 //for sending product info
 app.post('/postMenu', async (req, res) => {
   const { ProductName, Category, Weight, Quantity, OverQuan, Email, Fullname, Date, Uid } = req.body;
@@ -136,12 +138,10 @@ app.put('/editInventory/:item', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
 // edit/update product quantity
 app.put('/editProduct/:itemId', async (req, res) => {
   const commId = req.params.itemId;
   const {Fullname, Quantity, OverQuan, EditedUid, Date } = req.body; // Access req.body directly
-
   try {
     const result = await Inventory.findByIdAndUpdate(commId, {
       $set: {
@@ -161,9 +161,7 @@ app.put('/editProduct/:itemId', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
 //Inventory for ingredients
-
 //posting
 app.post('/postIng', async (req, res) => {
   const { IngName, Weight, Measure, Category, Quantity, Email, Fullname, Date, Uid } = req.body;
@@ -215,7 +213,6 @@ app.delete("/ingItem/:id", async (req, res) => {
 app.put('/editIng/:productId', async (req, res) => {
   const commId = req.params.productId;
   const { IngName, Weight, Quantity, Date } = req.body; // Access req.body directly
-
   try {
     const result = await Ingredients.findByIdAndUpdate(commId, {
       $set: {
@@ -299,10 +296,52 @@ app.put('/reportEdit/:repId', async (req, res) => {
   }
 });
 
+//chat endpoints
+
+//chat send msg
+
+app.post('/message', async (req, res) => {
+  const { userName, Message, Date, Uid } = req.body;
+  try {
+    const sendMessage = new Chat({
+      userName: userName,
+      Message: Message,
+      Date: Date,
+      Uid: Uid
+    });
+    await sendMessage.save();
+    res.status(201).json({ message: 'Activity saved successfully' });
+  } catch (error) {
+    console.error('Error saving activity:', error);
+    res.status(500).json({ error: 'Error saving activity' });
+  }
+});
+
+//get message texts 
+
+app.get('/getMessage', async (req, res) => {
+  Chat.find()
+  .then((response) => {
+    res.json(response)
+  }).catch((err) => {
+    console.log(err)
+  })
+})
 
 
-
-
+//delete endpoint for message
+app.delete("/deleteMessage/:id", async (req, res) => {
+  const itemId = req.params.id; //delete item from client
+  const data = await Chat;
+  const result = await data.deleteOne({ _id: new ObjectId(itemId) }); //finds the particular id to be deleted
+  if (!itemId.match(/^[0-9a-fA-F]{24}$/)) {
+    return res.status(400).send('Invalid ObjectId format'); //if invalid. this is  required
+  } if (result.deletedCount === 1) { //success
+    res.send("Document deleted successfully");
+  } else {
+    res.status(404).send("Document not found");
+  }
+});
 
 
 app.listen(8080, () => {
