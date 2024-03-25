@@ -30,6 +30,14 @@ const mySchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  ExpiryDate: {
+    type: String,
+    required: true,
+  },
+  Condition: {
+    type: String,
+    required: true,
+  },
   OverQuan: {
     type: String,
     required: true,

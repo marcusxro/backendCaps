@@ -7,59 +7,70 @@ mongoose.connect(atlasUri, {
   useUnifiedTopology: true,
 })
   .then(() => {
-    console.log("Connected to MongoDB Atlas (Ingredients)");
+    console.log("Connected to MongoDB Atlas (DeletedInv)");
   })
   .catch((e) => {
     console.error("Error connecting to MongoDB Atlas:", e);
   });
 
 const mySchema = new mongoose.Schema({
-  IngName: {
+  DeletedProductName: {
     type: String,
     required: true,
   },
-  Weight: {
+  DeletedCategory: {
     type: String,
     required: true,
   },
-  Category: {
+  DeletedWeight: {
     type: String,
     required: true,
   },
-  Measure: {
+  DeletedQuantity: {
     type: String,
     required: true,
   },
-  Quantity: {
+  DeletedExpiryDate: {
     type: String,
     required: true,
   },
-  Brand: {
+  DeletedCondition: {
     type: String,
     required: true,
   },
-  ExpiryDate: {
+  DeletedOverQuan: {
     type: String,
     required: true,
   },
-  Email: {
+  DeletedEmail: {
     type: String,
     required: true,
   },
-  Fullname: {
+  DeletedFullname: {
     type: String,
     required: true,
   },
-  Date: {
+  DeletedDate: {
     type: String,
     required: true,
   },
-  Uid: {
+  DeletedUid: {
     type: String,
     required: true,
   },
+  DeletedEditedUid: {
+    type: String,
+  },
+  CurrentUid: {
+    type: String,
+    required: true,
+},
+userNameDel: {
+    type: String,
+    required: true,
+},
 });
 
-const Ingredients = mongoose.model('ingredients', mySchema);
+const Menu = mongoose.model('DeletedInv', mySchema);
 
-module.exports = Ingredients;
+module.exports = Menu;

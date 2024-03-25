@@ -7,39 +7,27 @@ mongoose.connect(atlasUri, {
   useUnifiedTopology: true,
 })
   .then(() => {
-    console.log("Connected to MongoDB Atlas (Ingredients)");
+    console.log("Connected to MongoDB Atlas (Ingredients Reports)");
   })
   .catch((e) => {
     console.error("Error connecting to MongoDB Atlas:", e);
   });
 
 const mySchema = new mongoose.Schema({
-  IngName: {
+  Incident: {
     type: String,
     required: true,
   },
-  Weight: {
+  RepType: {
     type: String,
     required: true,
   },
-  Category: {
+  RepDetails: {
     type: String,
     required: true,
   },
-  Measure: {
-    type: String,
-    required: true,
-  },
-  Quantity: {
-    type: String,
-    required: true,
-  },
-  Brand: {
-    type: String,
-    required: true,
-  },
-  ExpiryDate: {
-    type: String,
+  isResolved: {
+    type: Boolean,
     required: true,
   },
   Email: {
@@ -60,6 +48,8 @@ const mySchema = new mongoose.Schema({
   },
 });
 
-const Ingredients = mongoose.model('ingredients', mySchema);
 
-module.exports = Ingredients;
+
+const EquipReport = mongoose.model('EquipReport', mySchema);
+
+module.exports = EquipReport;
