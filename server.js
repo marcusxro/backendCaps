@@ -19,6 +19,20 @@ const { ObjectId } = require('mongodb');
 app.use(express.json());
 app.use(cors());
 
+
+const multer = require('multer')
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, '../client/src/images')
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now();
+    cb(null, uniqueSuffix + file.originalname)
+  }
+})
+
+
+
 app.get('/', (req, res) => {
   res.send('connected');
 });
@@ -56,7 +70,7 @@ app.get('/accInfos', (req, res) => {
 
 app.put('/ban/:user', async (req, res) => {
   const commId = req.params.user;
-  const {isBanned} = req.body; // Access req.body directly
+  const { isBanned } = req.body; // Access req.body directly
 
   try {
     const result = await AccCollection.findByIdAndUpdate(commId, {
@@ -100,9 +114,6 @@ app.post('/postMenu', async (req, res) => {
   }
 });
 
-
-
-
 //for fetching the data to front end
 app.get('/menuDetails', async (req, res) => {
   Inventory.find()
@@ -131,32 +142,42 @@ app.delete("/item/:id", async (req, res) => {
 //edit inventory
 app.put('/editInventory/:item', async (req, res) => {
   const commId = req.params.item;
-  const { ProductName, Weight, Condition, ExpiryDate, Quantity, Date } = req.body; // Access req.body directly
+  const { ProductName, Weight, Condition, ExpiryDate, Quantity, Date } = req.body;
 
   try {
-    const result = await Inventory.findByIdAndUpdate(commId, {
-      $set: {
-        ProductName: ProductName,
-        Weight: Weight,
-        ExpiryDate: ExpiryDate,
-        Condition: Condition,
-        Quantity: Quantity,
-        Date: Date // Update Date field
-      },
-    });
+    // Construct the update object dynamically
+    let updateObject = {};
+    if (ProductName) updateObject.ProductName = ProductName;
+    if (Weight) updateObject.Weight = Weight;
+    if (Condition) updateObject.Condition = Condition;
+    if (ExpiryDate) updateObject.ExpiryDate = ExpiryDate;
+    if (Quantity) updateObject.Quantity = Quantity;
+    if (Date) updateObject.Date = Date;
+
+    // Check if updateObject is empty
+    if (Object.keys(updateObject).length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+
+    // Perform the update with the constructed updateObject
+    const result = await Inventory.findByIdAndUpdate(commId, { $set: updateObject });
+
     if (!result) {
       return res.status(404).json({ error: "Item not found" });
     }
+
     res.status(200).json({ message: 'Updated successfully' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+
 // edit/update product quantity
 app.put('/editProduct/:itemId', async (req, res) => {
   const commId = req.params.itemId;
-  const {Fullname, Quantity, OverQuan, EditedUid, Date } = req.body; // Access req.body directly
+  const { Fullname, Quantity, OverQuan, EditedUid, Date } = req.body; // Access req.body directly
   try {
     const result = await Inventory.findByIdAndUpdate(commId, {
       $set: {
@@ -206,11 +227,11 @@ app.post('/postIng', async (req, res) => {
 
 app.get('/getIng', async (req, res) => {
   Ingredients.find()
-  .then((ing) => {
-    res.json(ing)
-  }).catch((err) => {
-    console.log("theres some error", err)
-  })
+    .then((ing) => {
+      res.json(ing)
+    }).catch((err) => {
+      console.log("theres some error", err)
+    })
 })
 //delete data from ingredients db
 app.delete("/ingItem/:id", async (req, res) => {
@@ -257,38 +278,60 @@ app.put('/editIng/:productId', async (req, res) => {
 
 //report create method
 
-app.post('/reportCreate', async (req, res) => {
+const path = require('path');
+app.use('/images', express.static(path.join(__dirname, '../client/src/images')));
+const upload = multer({ storage: storage })
+
+app.post('/uploadAndReportCreate', upload.single("photoURL"), async (req, res) => {
   const { Incident, RepType, isResolved, RepDetails, Email, Fullname, Date, Uid } = req.body;
+  const photoURL = req.file ? req.file.filename : null;
   try {
-    const reportsCreate = new Reports({
-      Incident: Incident,
-      RepType: RepType,
-      isResolved: isResolved,
-      RepDetails: RepDetails,
-      Email: Email,
-      Fullname: Fullname,
-      Date: Date,
-      Uid: Uid
-    });
+    // Save image data if available
+    if (photoURL) {
+      const newProfile = new Reports({
+        photoURL: photoURL,
+        Uid: Uid,
+        Incident: Incident,
+        RepType: RepType,
+        isResolved: isResolved,
+        RepDetails: RepDetails,
+        Email: Email,
+        Fullname: Fullname,
+        Date: Date,
+      });
+      await newProfile.save();
+    } else {
+      // Save report data
+      const reportsCreate = new Reports({
+        Incident: Incident,
+        RepType: RepType,
+        isResolved: isResolved,
+        RepDetails: RepDetails,
+        Email: Email,
+        Fullname: Fullname,
+        Date: Date,
+        Uid: Uid
+      });
 
-    
-
-    await reportsCreate.save();
-    res.status(201).json({ message: 'Activity saved successfully' });
+      await reportsCreate.save();
+      res.status(201).json({ message: 'Activity saved successfully', photoURL: photoURL });
+    }
   } catch (error) {
-    console.error('Error saving activity:', error);
-    res.status(500).json({ error: 'Error saving activity' });
+    console.error('Error saving data:', error);
+    res.status(500).json({ error: 'Error saving data' });
   }
 });
 
 
+
+
 app.get('/getReports', async (req, res) => {
   Reports.find()
-  .then((details) => {
-    res.json(details)
-  }).catch((err) => {
-    console.log("error", err)
-  })
+    .then((details) => {
+      res.json(details)
+    }).catch((err) => {
+      console.log("error", err)
+    })
 })
 
 
@@ -302,7 +345,7 @@ app.put('/reportEdit/:repId', async (req, res) => {
       $set: {
         isResolved: isResolved,
         Uid: Uid,
-        Date: Date 
+        Date: Date
       },
     });
     if (!result) {
@@ -337,19 +380,19 @@ app.post('/message', async (req, res) => {
 });
 app.get('/getMessage', async (req, res) => {
   Chat.find()
-  .then((response) => {
-    res.json(response)
-  }).catch((err) => {
-    console.log(err)
-  })
+    .then((response) => {
+      res.json(response)
+    }).catch((err) => {
+      console.log(err)
+    })
 })
 app.delete("/deleteMessage/:id", async (req, res) => {
   const itemId = req.params.id; //delete item from client
   const data = await Chat;
-  const result = await data.deleteOne({ _id: new ObjectId(itemId) }); 
+  const result = await data.deleteOne({ _id: new ObjectId(itemId) });
   if (!itemId.match(/^[0-9a-fA-F]{24}$/)) {
-    return res.status(400).send('Invalid ObjectId format'); 
-  } if (result.deletedCount === 1) { 
+    return res.status(400).send('Invalid ObjectId format');
+  } if (result.deletedCount === 1) {
     res.send("Document deleted successfully");
   } else {
     res.status(404).send("Document not found");
@@ -411,10 +454,10 @@ app.put('/equipment/:eqId', async (req, res) => {
 app.delete("/deleteEquipment/:id", async (req, res) => {
   const itemId = req.params.id; //delete item from client
   const data = await Equipment;
-  const result = await data.deleteOne({ _id: new ObjectId(itemId) }); 
+  const result = await data.deleteOne({ _id: new ObjectId(itemId) });
   if (!itemId.match(/^[0-9a-fA-F]{24}$/)) {
-    return res.status(400).send('Invalid ObjectId format'); 
-  } if (result.deletedCount === 1) { 
+    return res.status(400).send('Invalid ObjectId format');
+  } if (result.deletedCount === 1) {
     res.send("Document deleted successfully");
   } else {
     res.status(404).send("Document not found");
@@ -422,37 +465,54 @@ app.delete("/deleteEquipment/:id", async (req, res) => {
 });
 
 
-
 app.get('/EquipGet', async (req, res) => {
   Equipment.find()
-  .then((data) => {
-    res.json(data)
-  }).catch((err) => {
-    console.log(err)
-  })
+    .then((data) => {
+      res.json(data)
+    }).catch((err) => {
+      console.log(err)
+    })
 })
 
 //Ingredients Rep
 
-
-app.post('/IngReport', async (req, res) => {
+app.post('/IngReport', upload.single("photoURL"), async (req, res) => {
   const { Incident, RepType, isResolved, RepDetails, Email, Fullname, Date, Uid } = req.body;
+  const photoURL = req.file ? req.file.filename : null;
   try {
-    const reportsCreate = new IngReport({
-      Incident: Incident,
-      RepType: RepType,
-      isResolved: isResolved,
-      RepDetails: RepDetails,
-      Email: Email,
-      Fullname: Fullname,
-      Date: Date,
-      Uid: Uid
-    });
-    await reportsCreate.save();
-    res.status(201).json({ message: 'Activity saved successfully' });
+    // Save image data if available
+    if (photoURL) {
+      const newProfile = new IngReport({
+        photoURL: photoURL,
+        Incident: Incident,
+        RepType: RepType,
+        isResolved: isResolved,
+        RepDetails: RepDetails,
+        Email: Email,
+        Fullname: Fullname,
+        Date: Date,
+        Uid: Uid
+      });
+      await newProfile.save();
+    } else {
+      // Save report data
+      const reportsCreate = new IngReport({
+        Incident: Incident,
+        RepType: RepType,
+        isResolved: isResolved,
+        RepDetails: RepDetails,
+        Email: Email,
+        Fullname: Fullname,
+        Date: Date,
+        Uid: Uid
+      });
+
+      await reportsCreate.save();
+      res.status(201).json({ message: 'Activity saved successfully', photoURL: photoURL });
+    }
   } catch (error) {
-    console.error('Error saving activity:', error);
-    res.status(500).json({ error: 'Error saving activity' });
+    console.error('Error saving data:', error);
+    res.status(500).json({ error: 'Error saving data' });
   }
 });
 
@@ -466,7 +526,7 @@ app.put('/IngReport/:repId', async (req, res) => {
       $set: {
         isResolved: isResolved,
         Uid: Uid,
-        Date: Date 
+        Date: Date
       },
     });
     if (!result) {
@@ -482,38 +542,54 @@ app.put('/IngReport/:repId', async (req, res) => {
 //get the json
 app.get('/getIngRep', async (req, res) => {
   IngReport.find()
-  .then((item) => {
-    res.json(item)
-  }).catch((err) => {
-    console.log(err)
-  })
+    .then((item) => {
+      res.json(item)
+    }).catch((err) => {
+      console.log(err)
+    })
 })
-
-
-
-
 //Equipment Rep
-
-app.post('/EquipRep', async (req, res) => {
+app.post('/EquipRep', upload.single("photoURL"), async (req, res) => {
   const { Incident, RepType, isResolved, RepDetails, Email, Fullname, Date, Uid } = req.body;
+  const photoURL = req.file ? req.file.filename : null;
   try {
-    const reportsCreate = new EquipReport({
-      Incident: Incident,
-      RepType: RepType,
-      isResolved: isResolved,
-      RepDetails: RepDetails,
-      Email: Email,
-      Fullname: Fullname,
-      Date: Date,
-      Uid: Uid
-    });
-    await reportsCreate.save();
-    res.status(201).json({ message: 'Activity saved successfully' });
+    // Save image data if available
+    if (photoURL) {
+      const newProfile = new EquipReport({
+        photoURL: photoURL,
+        Incident: Incident,
+        RepType: RepType,
+        isResolved: isResolved,
+        RepDetails: RepDetails,
+        Email: Email,
+        Fullname: Fullname,
+        Date: Date,
+        Uid: Uid
+      });
+      await newProfile.save();
+    } else {
+      // Save report data
+      const reportsCreate = new EquipReport({
+        Incident: Incident,
+        RepType: RepType,
+        isResolved: isResolved,
+        RepDetails: RepDetails,
+        Email: Email,
+        Fullname: Fullname,
+        Date: Date,
+        Uid: Uid
+      });
+
+      await reportsCreate.save();
+      res.status(201).json({ message: 'Activity saved successfully', photoURL: photoURL });
+    }
   } catch (error) {
-    console.error('Error saving activity:', error);
-    res.status(500).json({ error: 'Error saving activity' });
+    console.error('Error saving data:', error);
+    res.status(500).json({ error: 'Error saving data' });
   }
 });
+
+
 
 //edit
 app.put('/EquipReport/:repId', async (req, res) => {
@@ -525,7 +601,7 @@ app.put('/EquipReport/:repId', async (req, res) => {
       $set: {
         isResolved: isResolved,
         Uid: Uid,
-        Date: Date 
+        Date: Date
       },
     });
     if (!result) {
@@ -541,11 +617,11 @@ app.put('/EquipReport/:repId', async (req, res) => {
 //get the json
 app.get('/EquipReport', async (req, res) => {
   EquipReport.find()
-  .then((item) => {
-    res.json(item)
-  }).catch((err) => {
-    console.log(err)
-  })
+    .then((item) => {
+      res.json(item)
+    }).catch((err) => {
+      console.log(err)
+    })
 })
 
 
@@ -555,7 +631,7 @@ app.get('/EquipReport', async (req, res) => {
 app.post('/DeletedInv', async (req, res) => {
   const { DeletedProductName, DeletedCategory, DeletedWeight,
     DeletedExpiryDate, DeletedCondition, DeletedQuantity,
-     DeletedOverQuan, DeletedEmail, DeletedFullname, DeletedDate, DeletedUid, CurrentUid, userNameDel } = req.body;
+    DeletedOverQuan, DeletedEmail, DeletedFullname, DeletedDate, DeletedUid, CurrentUid, userNameDel } = req.body;
   try {
 
     const inventoryItems = new DeletedInv({
@@ -584,11 +660,11 @@ app.post('/DeletedInv', async (req, res) => {
 
 app.get('/GetDel', async (req, res) => {
   DeletedInv.find()
-  .then((info) => {
-    res.json(info)
-  }).catch((err) => {
-    console.log(err)
-  })
+    .then((info) => {
+      res.json(info)
+    }).catch((err) => {
+      console.log(err)
+    })
 })
 
 
@@ -624,11 +700,11 @@ app.post('/DeletedEquip', async (req, res) => {
 });
 app.get('/GetDelEq', async (req, res) => {
   DeletedEquipment.find()
-  .then((info) => {
-    res.json(info)
-  }).catch((err) => {
-    console.log(err)
-  })
+    .then((info) => {
+      res.json(info)
+    }).catch((err) => {
+      console.log(err)
+    })
 })
 
 
@@ -661,12 +737,14 @@ app.post('/DeletedIng', async (req, res) => {
 
 app.get('/GetDelIng', async (req, res) => {
   DeletedIng.find()
-  .then((info) => {
-    res.json(info)
-  }).catch((err) => {
-    console.log(err)
-  })
+    .then((info) => {
+      res.json(info)
+    }).catch((err) => {
+      console.log(err)
+    })
 })
+
+
 
 
 

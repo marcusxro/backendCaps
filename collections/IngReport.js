@@ -42,6 +42,10 @@ const mySchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  photoURL: {
+    type: String,
+    required: false,
+  },
   Uid: {
     type: String,
     required: true,
