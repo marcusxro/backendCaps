@@ -3,8 +3,13 @@ const mongoose = require('mongoose');
 const atlasUri = 'mongodb+srv://marcussalopaso1:zedmain1525@cluster0.m8fd2iw.mongodb.net/cafe';
 
 mongoose.connect(atlasUri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+
+    useNewUrlParser: true,
+    useCreateIndex: true,
+    useFindAndModify: false,  // For deprecated findOneAndUpdate()
+    useUnifiedTopology: true  // Remove this line if using MongoDB Node.js Driver version 4.0.0 and above
+
+  
 })
   .then(() => {
     console.log("Connected to MongoDB Atlas (inventory)");

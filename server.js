@@ -142,36 +142,54 @@ app.delete("/item/:id", async (req, res) => {
 //edit inventory
 app.put('/editInventory/:item', async (req, res) => {
   const commId = req.params.item;
-  const { ProductName, Weight, Condition, ExpiryDate, Quantity, Date } = req.body;
+  const { ProductName, Weight, Condition, ExpiryDate, Quantity, Date, EditedUid } = req.body;
 
   try {
-    // Construct the update object dynamically
-    let updateObject = {};
-    if (ProductName) updateObject.ProductName = ProductName;
-    if (Weight) updateObject.Weight = Weight;
-    if (Condition) updateObject.Condition = Condition;
-    if (ExpiryDate) updateObject.ExpiryDate = ExpiryDate;
-    if (Quantity) updateObject.Quantity = Quantity;
-    if (Date) updateObject.Date = Date;
+    console.log("Received Condition:", Condition);
+    console.log("Received commId:", commId);  // Log the received ObjectId
 
-    // Check if updateObject is empty
-    if (Object.keys(updateObject).length === 0) {
+    let updateObject = {
+      ProductName,
+      Weight,
+      Condition,
+      ExpiryDate,
+      Quantity,
+      Date,
+      EditedUid
+    };
+
+    if (!ProductName && !Weight && !Condition && !ExpiryDate && !Quantity && !Date) {
       return res.status(400).json({ error: 'No valid fields to update' });
     }
 
-    // Perform the update with the constructed updateObject
-    const result = await Inventory.findByIdAndUpdate(commId, { $set: updateObject });
+    const result = await Inventory.findByIdAndUpdate(commId, { $set: updateObject }, { new: true });
+
+    console.log("Result from findByIdAndUpdate:", result);  // Log the result
 
     if (!result) {
       return res.status(404).json({ error: "Item not found" });
     }
 
-    res.status(200).json({ message: 'Updated successfully' });
+    if (result._id.toString() !== commId) {
+      console.error("Mismatched commId after update:", commId, "vs", result._id);
+      return res.status(500).json({ error: 'Internal server error: Mismatched commId' });
+    }
+
+    if (Condition && result.Condition !== Condition) {
+      console.error("Condition not updated as expected:", result.Condition, "vs", Condition);
+      return res.status(500).json({ error: 'Internal server error: Condition not updated' });
+    }
+
+    res.status(200).json({ message: 'Updated successfully', updatedItem: result });
   } catch (error) {
-    console.error(error);
+    console.error("Error updating item:", error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+
+
+
 
 
 // edit/update product quantity
