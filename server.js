@@ -41,6 +41,7 @@ app.get('/', (req, res) => {
 app.post('/GetAcc', async (req, res) => {
   const { Email, Firstname, isBanned, Lastname, Position, Password, Uid } = req.body;
   try {
+    console.log(Email)
     const AccountInfo = new AccCollection({
       Email: Email,
       Firstname: Firstname,
