@@ -1,9 +1,7 @@
 const mongoose = require('mongoose');
 const { boolean } = require('webidl-conversions');
 
-const atlasUri = 'mongodb+srv://marcussalopaso1:zedmain1525@cluster0.m8fd2iw.mongodb.net/cafe';
-
-mongoose.connect(atlasUri, {
+const atlasUri = 'connection', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
